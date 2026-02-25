@@ -3,46 +3,59 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>10-tools API Test</title>
+  <title>10-tools Widget Test</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding: 16px; max-width: 840px; margin: 0 auto; }
-    pre { background: #f6f8fa; padding: 12px; border-radius: 8px; overflow: auto; }
-    input, textarea, button { font: inherit; }
-    button { padding: 8px 12px; border: 1px solid #ccc; border-radius: 8px; background: #fff; cursor: pointer; }
-    button.primary { background: #111; color: #fff; border-color: #111; }
+    body { margin: 0; padding: 16px; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .hint { font-size: 12px; opacity: .75; margin-bottom: 12px; }
+    .box { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; }
+    pre { white-space: pre-wrap; word-break: break-word; }
   </style>
 </head>
 <body>
-  <h1>10-tools API 稼働確認</h1>
-  <p>このHTMLは APIキー（tk_...）で <code>/v1/ping</code> を叩き、疎通を確認します。</p>
-  <p>※ <strong>file://</strong> で開くと一部ブラウザで制限が出る場合があります。可能なら Vercel / localhost の静的配信で開いてください。</p>
-
-  <label>APIキー（tk_...）<br/><input id="apiKey" style="width:100%" placeholder="tk_..." /></label>
-  <div style="margin-top:12px">
-    <button class="primary" id="btnPing">/v1/ping</button>
+  <div class="hint">
+    これは <b>埋め込み（iframe）</b> の動作確認用ページです。<br/>
+    ローカルで file:// 直開きだとログイン等が期待通り動かない場合があるので、Vercel/GitHub Pages など「http(s)」で配信して確認してください。
   </div>
 
-  <div style="margin-top:12px">レスポンス</div>
-  <pre id="out">(not run)</pre>
+  <div class="box" id="embed-root">
+    <!-- まずは oEmbed を使って埋め込み（task-tool.com 側でサーバー取得する想定の疑似） -->
+    <div id="oembed-status" class="hint">oEmbed を取得中...</div>
+    <div id="oembed-html"></div>
+
+    <!-- フォールバック：直接 iframe -->
+    <noscript>
+      <iframe id="ai-tools-widget" src="https://10-tools.com/embed/tool/d6d290b5-5969-494a-8f78-120c3a353288" style="width:100%;border:0;min-height:600px;" loading="lazy" allow="clipboard-read; clipboard-write"></iframe>
+      <script src="https://10-tools.com/embed/resize.js" defer></script>
+    </noscript>
+  </div>
+
+  <pre id="debug" class="hint"></pre>
 
   <script>
-    const base = "<SUPABASE_URL>/functions/v1/api-v1";
-    const out = document.getElementById('out');
-    const apiKeyEl = document.getElementById('apiKey');
+    (function () {
+      const toolUrl = "https://10-tools.com/tool-detail/d6d290b5-5969-494a-8f78-120c3a353288";
+      const oembedUrl = "https://10-tools.com/functions/v1/oembed?url=" + encodeURIComponent(toolUrl);
+      const debug = (msg) => { document.getElementById("debug").textContent = String(msg || ""); };
 
-    document.getElementById('btnPing').addEventListener('click', async () => {
-      const apiKey = apiKeyEl.value.trim();
-      if (!apiKey) { out.textContent = 'APIキーを入力してください'; return; }
-      out.textContent = 'loading...';
-
-      try {
-        const r = await fetch(base + '/v1/ping', { headers: { Authorization: 'Bearer ' + apiKey } });
-        const j = await r.json().catch(() => ({}));
-        out.textContent = JSON.stringify({ status: r.status, body: j }, null, 2);
-      } catch (e) {
-        out.textContent = String(e);
-      }
-    });
+      fetch(oembedUrl, { method: "GET" })
+        .then(async (res) => {
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(json.error || "oEmbed request failed");
+          return json;
+        })
+        .then((o) => {
+          document.getElementById("oembed-status").textContent = "oEmbed 取得OK";
+          document.getElementById("oembed-html").innerHTML = o.html || "";
+          debug(JSON.stringify({ oembed_endpoint: oembedUrl, received: o }, null, 2));
+        })
+        .catch((e) => {
+          document.getElementById("oembed-status").textContent = "oEmbed 取得失敗（フォールバックで iframe を表示）";
+          document.getElementById("oembed-html").innerHTML =
+            '<iframe id="ai-tools-widget" src="https://10-tools.com/embed/tool/d6d290b5-5969-494a-8f78-120c3a353288" style="width:100%;border:0;min-height:600px;" loading="lazy" allow="clipboard-read; clipboard-write"></iframe>' +
+            '<script src="https://10-tools.com/embed/resize.js" defer><\/script>';
+          debug(String(e && e.message ? e.message : e));
+        });
+    })();
   </script>
 </body>
 </html>
