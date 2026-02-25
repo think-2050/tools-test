@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>10-tools API Test</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding: 16px; max-width: 840px; margin: 0 auto; }
+    pre { background: #f6f8fa; padding: 12px; border-radius: 8px; overflow: auto; }
+    input, textarea, button { font: inherit; }
+    button { padding: 8px 12px; border: 1px solid #ccc; border-radius: 8px; background: #fff; cursor: pointer; }
+    button.primary { background: #111; color: #fff; border-color: #111; }
+  </style>
+</head>
+<body>
+  <h1>10-tools API 稼働確認</h1>
+  <p>このHTMLは APIキー（tk_...）で <code>/v1/ping</code> を叩き、疎通を確認します。</p>
+  <p>※ <strong>file://</strong> で開くと一部ブラウザで制限が出る場合があります。可能なら Vercel / localhost の静的配信で開いてください。</p>
+
+  <label>APIキー（tk_...）<br/><input id="apiKey" style="width:100%" placeholder="tk_..." /></label>
+  <div style="margin-top:12px">
+    <button class="primary" id="btnPing">/v1/ping</button>
+  </div>
+
+  <div style="margin-top:12px">レスポンス</div>
+  <pre id="out">(not run)</pre>
+
+  <script>
+    const base = "<SUPABASE_URL>/functions/v1/api-v1";
+    const out = document.getElementById('out');
+    const apiKeyEl = document.getElementById('apiKey');
+
+    document.getElementById('btnPing').addEventListener('click', async () => {
+      const apiKey = apiKeyEl.value.trim();
+      if (!apiKey) { out.textContent = 'APIキーを入力してください'; return; }
+      out.textContent = 'loading...';
+
+      try {
+        const r = await fetch(base + '/v1/ping', { headers: { Authorization: 'Bearer ' + apiKey } });
+        const j = await r.json().catch(() => ({}));
+        out.textContent = JSON.stringify({ status: r.status, body: j }, null, 2);
+      } catch (e) {
+        out.textContent = String(e);
+      }
+    });
+  </script>
+</body>
+</html>
